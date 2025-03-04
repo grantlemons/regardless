@@ -5,7 +5,6 @@ use std::{
 };
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
-pub trait WrappableError: StdError + Send + Sync + 'static {}
 
 #[derive(Debug)]
 pub struct Error {
@@ -39,9 +38,11 @@ impl Display for Error {
         )
     }
 }
-impl StdError for Error {}
 
-impl<E: WrappableError> From<E> for Error {
+impl<E> From<E> for Error
+where
+    E: StdError + Send + Sync + 'static,
+{
     fn from(value: E) -> Self {
         Self {
             inner: Box::new(value),
@@ -68,7 +69,7 @@ pub trait Context<T, E> {
 
 impl<T, E> Context<T, E> for Result<T, E>
 where
-    E: WrappableError,
+    E: StdError + Send + Sync + 'static,
 {
     fn context<C>(self, context: C) -> Result<T, Error>
     where
@@ -97,5 +98,17 @@ where
                 res
             }),
         }
+    }
+}
+
+impl From<Error> for Box<dyn StdError + Send + 'static> {
+    fn from(error: Error) -> Self {
+        error.inner
+    }
+}
+
+impl AsRef<dyn StdError + Send + Sync> for Error {
+    fn as_ref(&self) -> &(dyn StdError + Send + Sync + 'static) {
+        &**self
     }
 }
