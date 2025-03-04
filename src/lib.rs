@@ -1,12 +1,11 @@
 use std::{
     error::Error as StdError,
-    fmt::Display,
+    fmt::{Debug, Display},
     ops::{Deref, DerefMut},
 };
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
-#[derive(Debug)]
 pub struct Error {
     inner: Box<dyn StdError + Send + Sync + 'static>,
     context: Vec<String>,
@@ -30,12 +29,18 @@ impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{}\n{}",
+            "{}{}",
             self.inner,
             self.context
                 .iter()
                 .fold(String::new(), |acc, c| acc + "\n" + c)
         )
+    }
+}
+
+impl Debug for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        std::fmt::Display::fmt(self, f)
     }
 }
 
