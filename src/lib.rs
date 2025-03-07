@@ -4,11 +4,37 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
+#[macro_export]
+macro_rules! regardless {
+    ($s:literal) => {
+        Error::from_str($s)
+    };
+    ($fstring:literal, $($arg:tt)*) => {
+        Error::from_string(format!($fstring, $($arg)*))
+    };
+}
+
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub struct Error {
     inner: Box<dyn StdError + Send + Sync + 'static>,
     context: Vec<String>,
+}
+
+impl Error {
+    pub fn from_str(s: &str) -> Self {
+        Self {
+            inner: s.into(),
+            context: Vec::new(),
+        }
+    }
+
+    pub fn from_string(s: String) -> Self {
+        Self {
+            inner: s.into(),
+            context: Vec::new(),
+        }
+    }
 }
 
 impl Deref for Error {
@@ -76,6 +102,37 @@ impl<T, E> Context<T, E> for Result<T, E>
 where
     E: StdError + Send + Sync + 'static,
 {
+    fn context<C>(self, context: C) -> Result<T, Error>
+    where
+        C: Display + Send + Sync + 'static,
+    {
+        match self {
+            Ok(ok) => Ok(ok),
+            Err(error) => Err({
+                let mut res = Error::from(error);
+                res.extend_context(context.to_string());
+                res
+            }),
+        }
+    }
+
+    fn with_context<C, F>(self, context: F) -> Result<T, Error>
+    where
+        C: Display + Send + Sync + 'static,
+        F: FnOnce() -> C,
+    {
+        match self {
+            Ok(ok) => Ok(ok),
+            Err(error) => Err({
+                let mut res = Error::from(error);
+                res.extend_context(context().to_string());
+                res
+            }),
+        }
+    }
+}
+
+impl<T> Context<T, Error> for Result<T, Error> {
     fn context<C>(self, context: C) -> Result<T, Error>
     where
         C: Display + Send + Sync + 'static,
