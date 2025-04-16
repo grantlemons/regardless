@@ -140,7 +140,7 @@ impl<T> Context<T, Error> for Result<T, Error> {
         match self {
             Ok(ok) => Ok(ok),
             Err(error) => Err({
-                let mut res = Error::from(error);
+                let mut res = error;
                 res.extend_context(context.to_string());
                 res
             }),
@@ -155,7 +155,7 @@ impl<T> Context<T, Error> for Result<T, Error> {
         match self {
             Ok(ok) => Ok(ok),
             Err(error) => Err({
-                let mut res = Error::from(error);
+                let mut res = error;
                 res.extend_context(context().to_string());
                 res
             }),
